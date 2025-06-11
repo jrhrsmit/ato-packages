@@ -7,13 +7,16 @@ paths:
 
 builds:
   default:
-    entry: test.ato:DEMO
+    entry: OpAmpHysteresis.ato:OpAmpHysteresis
     #fail_on_drcs: false
     #keep_picked_parts: true
     #hide_designators: true
 
+  test:
+    entry: OpAmpHysteresis.ato:Test
+
 package:
-  identifier: jrhrsmit/demo
+  identifier: jrhrsmit/opamp-hysteresis
   repository: https://github.com/jrhrsmit/atopile-packages
   version: "0.1.0"
   # authors:
@@ -21,4 +24,4 @@ package:
   #     email:
   #summary:
   license: MIT
-  #homepage: https://github.com/jrhrsmit/DEMO
+  #homepage: https://github.com/jrhrsmit/opamp-hysteresis

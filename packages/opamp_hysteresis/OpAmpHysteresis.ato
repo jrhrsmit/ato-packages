@@ -1,0 +1,72 @@
+#pragma experiment("MODULE_TEMPLATING")
+#pragma experiment("BRIDGE_CONNECT")
+
+import Resistor
+import OpAmp
+import Electrical
+from "OpAmpMulti.py" import OpAmpMulti
+
+module OpAmpHysteresis:
+    """
+    OpAmp hysteresis module.
+
+    See https://www.ti.com/lit/ug/tidu020a/tidu020a.pdf
+    """
+    # parameters
+    Vth_l: V
+    Vth_h: V
+
+    Vref_h: V
+    Vref_l: V
+
+    Vo_h: V
+    Vo_l: V
+
+    # components
+    opamp = new OpAmp
+
+    r_ref_high = new Resistor # R1
+    r_ref_low = new Resistor # R2
+    r_hyst = new Resistor # R3
+
+    # b = (Vth_h - Vo_h) / (Vref_h  - Vth_h)
+    # d = (Vth_l - Vo_l) / (Vref_h  - Vth_l)
+    # a = (Vth_h - Vref_l) / (Vref_h - Vth_h)
+    # c = (Vref_l - Vth_l) / (Vref_h - Vth_l)
+
+    # Y1 = (b - d * a / c) * Y3
+    # R1 * (b - d * a / c) = R3
+
+    # R2 = (Vdd - Vth_h) / ((Vth_h - Vss) / R2 + (Vth_h - Vo_h) / R3)
+
+    # Set R1 to 100kOhm
+    assert r_ref_high.resistance within 100kohm +/- 1%
+
+    # Calculate r_hyst (R3) with the given voltages and R1
+    r_hyst.resistance = r_ref_high.resistance * ((Vth_h - Vo_h) / (Vref_h  - Vth_h) - (Vth_l - Vo_l) / (Vref_h  - Vth_l) * ((Vth_h - Vref_l) / (Vref_h - Vth_h)) / ((Vref_l - Vth_l) / (Vref_h - Vth_l)))
+
+    # Calculate r_ref_low (R2)
+    r_ref_low.resistance = (Vref_h - Vth_h) / ((Vth_h - Vref_l) / r_ref_low.resistance + (Vth_h - Vo_h) / r_hyst.resistance)
+
+    opamp.power.hv ~> r_ref_high ~> opamp.non_inverting
+    opamp.non_inverting ~> r_ref_low ~> opamp.power.lv
+    opamp.non_inverting ~> r_hyst ~> opamp.output
+
+module Test:
+    opamp_hyst = new OpAmpHysteresis
+    opamp_hyst.Vth_l = 1.0V
+    opamp_hyst.Vth_h = 3.0V
+
+    opamp_hyst.Vo_l = 0.0V
+    opamp_hyst.Vo_h = 5.0V
+
+    opamp_hyst.Vref_l = 0.0V
+    opamp_hyst.Vref_h = 5.0V
+
+    opamp_multi = new OpAmpMulti<num_amplifiers=2>
+    opamp_multi.lcsc_id = "C7426"
+
+    opamp_hyst.opamp.inverting_input ~ opamp_multi.opamps[0].inverting_input
+    opamp_hyst.opamp.non_inverting_input ~ opamp_multi.opamps[0].non_inverting_input
+    opamp_hyst.opamp.output ~ opamp_multi.opamps[0].output
+    opamp_hyst.opamp.power ~ opamp_multi.opamps[0].power

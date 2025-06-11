@@ -1,8 +1,0 @@
-import Resistor
-
-module DEMO:
-    """
-    DEMO module.
-    """
-    # components
-    r = new Resistor
