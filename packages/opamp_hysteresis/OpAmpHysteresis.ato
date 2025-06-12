@@ -28,25 +28,42 @@ module OpAmpHysteresis:
     r_ref_high = new Resistor # R1
     r_ref_low = new Resistor # R2
     r_hyst = new Resistor # R3
+    
 
-    # b = (Vth_h - Vo_h) / (Vref_h  - Vth_h)
-    # d = (Vth_l - Vo_l) / (Vref_h  - Vth_l)
-    # a = (Vth_h - Vref_l) / (Vref_h - Vth_h)
-    # c = (Vref_l - Vth_l) / (Vref_h - Vth_l)
+    b = (Vth_h - Vo_h) / (Vref_h  - Vth_h)
+    d = (Vth_l - Vo_l) / (Vref_h  - Vth_l)
+    a = (Vth_h - Vref_l) / (Vref_h - Vth_h)
+    c = (Vref_l - Vth_l) / (Vref_h - Vth_l)
 
     # Y1 = (b - d * a / c) * Y3
     # R1 * (b - d * a / c) = R3
-
-    # R2 = (Vdd - Vth_h) / ((Vth_h - Vss) / R2 + (Vth_h - Vo_h) / R3)
-
+    
     # Set R1 to 100kOhm
     assert r_ref_high.resistance within 100kohm +/- 1%
 
     # Calculate r_hyst (R3) with the given voltages and R1
-    r_hyst.resistance = r_ref_high.resistance * ((Vth_h - Vo_h) / (Vref_h  - Vth_h) - (Vth_l - Vo_l) / (Vref_h  - Vth_l) * ((Vth_h - Vref_l) / (Vref_h - Vth_h)) / ((Vref_l - Vth_l) / (Vref_h - Vth_l)))
+    r_hyst.resistance = (b - d * a / c) * r_ref_high.resistance
 
     # Calculate r_ref_low (R2)
-    r_ref_low.resistance = (Vref_h - Vth_h) / ((Vth_h - Vref_l) / r_ref_low.resistance + (Vth_h - Vo_h) / r_hyst.resistance)
+    i1_h : A
+    i1_h = (Vref_h - Vth_h) / r_ref_high.resistance
+    i3_h : A
+    i3_h = (Vth_h - Vo_h) / r_hyst.resistance
+    i2_h : A
+    i2_h = i1_h - i3_h 
+
+    r1 : ohm
+    r1 = (Vref_h - Vth_h) / i1_h
+    r2 : ohm
+    r2 = (Vth_h - Vref_l) / i2_h
+    r3 : ohm
+    r3 = (Vth_h - Vo_h) / i3_h
+    r_ref_low.resistance = (Vth_h - Vref_l) / i2_h
+    
+
+    #r_hyst.resistance = r_ref_high.resistance * ((Vth_h - Vo_h) / (Vref_h  - Vth_h) - (Vth_l - Vo_l) / (Vref_h  - Vth_l) * ((Vth_h - Vref_l) / (Vref_h - Vth_h)) / ((Vref_l - Vth_l) / (Vref_h - Vth_l)))
+
+    #r_ref_low.resistance = (Vth_h - Vref_l) / ((Vref_l - Vth_h) / r_ref_high.resistance + (Vth_h - Vo_h) / r_hyst.resistance)
 
     opamp.power.hv ~> r_ref_high ~> opamp.non_inverting
     opamp.non_inverting ~> r_ref_low ~> opamp.power.lv
@@ -54,8 +71,8 @@ module OpAmpHysteresis:
 
 module Test:
     opamp_hyst = new OpAmpHysteresis
-    opamp_hyst.Vth_l = 1.0V
-    opamp_hyst.Vth_h = 3.0V
+    opamp_hyst.Vth_l = 2V
+    opamp_hyst.Vth_h = 3V
 
     opamp_hyst.Vo_l = 0.0V
     opamp_hyst.Vo_h = 5.0V
